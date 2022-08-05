@@ -37,29 +37,21 @@ var (
 		0:  "shuffle neil young",
 		1:  "shuffle patty griffin",
 		2:  "shuffle aimee mann",
-		3:  "shuffle amy winehouse",
-		4:  "album late for the sky jackson browne",
-		5:  "album mental illness aimee mann",
-		6:  "album after the goldrush neil young",
-		7:  "album living in clip ani difranco",
-		8:  "playlist Mortality",
-		9:  "playlist Every Single Day",
-		10: "station patty griffin",
-		11: "station all you have is your soul",
+		3:  "shuffle lucinda williams",
+		4:  "shuffle jason isbell",
+		5:  "shuffle radiohead",
+		6:  "shuffle tom petty",
+		7:  "shuffle amanda shires",
+		8:  "shuffle jackson browne",
+		9:  "shuffle ani difranco",
+		10: "shuffle counting crows",
+		11: "album after the goldrush neil young",
+		12: "random_playlist",
+		13: "station patty griffin",
 		14: "next",
 		15: "play_pause",
 	}
 )
-
-/*Amazon My Music Playlists
-An Unarmorial Age
-Anything that Can't Be Left Behind
-Dec. 29, 2012
-December 2015
-Every Single Day
-Like You've Never Seen Water
-Mortality
-*/
 
 func main() {
 	time.Sleep(5 * time.Second)
@@ -194,8 +186,6 @@ func main() {
 					tr.WriteDisplay()
 					fmt.Printf("%d was pressed\r\n", k)
 					if action, ok := keyMap[k]; ok {
-						//if k < 4 {
-						//	sendMessage2(keyMap[k])
 						sendMessage2(action)
 					} else {
 						sendMessage(k)
