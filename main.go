@@ -32,33 +32,12 @@ var (
 	adaptor *wifinina.Device
 	cl      mqtt.Client
 	topic   = "trellis"
-
-	keyMap = map[uint8]string{
-		0:  "shuffle neil young",
-		1:  "shuffle patty griffin",
-		2:  "shuffle aimee mann",
-		3:  "shuffle lucinda williams",
-		4:  "shuffle jason isbell",
-		5:  "shuffle radiohead",
-		6:  "shuffle tom petty",
-		7:  "shuffle amanda shires",
-		8:  "shuffle jackson browne",
-		9:  "shuffle ani difranco",
-		10: "shuffle counting crows",
-		11: "album after the goldrush neil young",
-		12: "random_playlist",
-		13: "station patty griffin",
-		14: "next",
-		15: "play_pause",
-	}
 )
 
 func main() {
 	time.Sleep(5 * time.Second)
-	//i2c := machine.I2C0
-	//err := i2c.Configure(machine.I2CConfig{
 	err := machine.I2C0.Configure(machine.I2CConfig{
-		//Frequency: machine.TWI_FREQ_100KHZ,
+		// I think these are the defaults
 		Frequency: machine.TWI_FREQ_400KHZ,
 		SCL:       machine.SCL_PIN,
 		SDA:       machine.SDA_PIN,
@@ -79,7 +58,7 @@ func main() {
 	fmt.Println("Configure")
 	time.Sleep(1 * time.Second)
 
-	err = machine.SPI0.Configure(machine.SPIConfig{Frequency: 2000000}) //115200 worked
+	err = machine.SPI0.Configure(machine.SPIConfig{Frequency: 2000000})
 	if err != nil {
 		println(err)
 	}
@@ -109,8 +88,6 @@ func main() {
 	}
 	println("firmware:", s)
 
-	//time.Sleep(10 * time.Second) ///////
-
 	for {
 		err := connectToAP()
 		if err == nil {
@@ -138,37 +115,14 @@ func main() {
 		time.Sleep(1 * time.Millisecond)
 		trellis.SetLED(i)
 		time.Sleep(1 * time.Millisecond)
-		//fmt.Printf("WriteDisplay\r\n")
 		tr.WriteDisplay()
 		i += 1
 		if i == 16 {
-			//i = 0
 			break
 		}
 		time.Sleep(300 * time.Millisecond)
 	}
 
-	/*
-		//lastkey := uint8(16)
-		lastkey := 16
-		for {
-			//b := tr.ReadSwitches()
-			b, key := tr.ReadSingleSwitch()
-			time.Sleep(10 * time.Millisecond)
-			if b {
-				if lastkey != key {
-					trellis.Clear()
-					trellis.SetLED(uint8(key))
-					time.Sleep(1 * time.Millisecond)
-					tr.WriteDisplay()
-					lastkey = key
-					fmt.Printf("key = %d\r\n", key)
-				}
-			}
-		}
-	*/
-
-	//j := 0
 	t := time.Now()
 	for {
 		b := tr.ReadSwitches()
@@ -184,24 +138,17 @@ func main() {
 					trellis.SetLED(k)
 					time.Sleep(1 * time.Millisecond)
 					tr.WriteDisplay()
-					fmt.Printf("%d was pressed\r\n", k)
-					if action, ok := keyMap[k]; ok {
-						sendMessage2(action)
-					} else {
-						sendMessage(k)
-					}
+					//fmt.Printf("%d was pressed\r\n", k)
+					sendMessage(k)
 					break
 				}
 			}
 		}
-		//j++
-		//if j == 10000 {
 		if time.Since(t) > time.Minute {
 			token := cl.Pingreq()
 			if token.Error() != nil {
 				failMessage("ping", token.Error().Error())
 			}
-			//j = 0
 			t = time.Now()
 		}
 		time.Sleep(1 * time.Millisecond)
@@ -251,25 +198,6 @@ func failMessage(action, msg string) {
 func sendMessage(key uint8) {
 	println("Publishing MQTT message...")
 	data := []byte(fmt.Sprintf(`{"key":%d}`, key))
-	token := cl.Publish(topic, 0, false, data)
-	token.Wait()
-	if err := token.Error(); err != nil {
-		switch t := err.(type) {
-		case wifinina.Error:
-			println(t.Error(), "attempting to reconnect")
-			if token := cl.Connect(); token.Wait() && token.Error() != nil {
-				failMessage("mqtt send", token.Error().Error())
-			}
-		default:
-			println(err.Error())
-		}
-	}
-}
-
-func sendMessage2(action string) {
-	println("Publishing MQTT message...")
-	//data := []byte(fmt.Sprintf(`{"key":%d}`, key))
-	data := []byte(fmt.Sprintf(`{"action":%q}`, action))
 	token := cl.Publish(topic, 0, false, data)
 	token.Wait()
 	if err := token.Error(); err != nil {
