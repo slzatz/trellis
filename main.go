@@ -2,13 +2,17 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"machine"
 	"math/rand"
 	"time"
 
 	"tinygo.org/x/drivers/net/mqtt"
+	"tinygo.org/x/drivers/ssd1306"
 	"tinygo.org/x/drivers/trellis"
 	"tinygo.org/x/drivers/wifinina"
+	"tinygo.org/x/tinyfont"
+	"tinygo.org/x/tinyfont/freemono"
 )
 
 var NINA_SPI = machine.SPI0
@@ -32,6 +36,9 @@ var (
 	adaptor *wifinina.Device
 	cl      mqtt.Client
 	topic   = "trellis"
+	font    = &freemono.Bold9pt7b
+	white   = color.RGBA{255, 255, 255, 255}
+	display ssd1306.Device
 )
 
 func main() {
@@ -48,6 +55,16 @@ func main() {
 		return
 	}
 
+	display = ssd1306.NewI2C(machine.I2C0)
+	display.Configure(ssd1306.Config{
+		Address: ssd1306.Address_128_32,
+		Width:   128,
+		Height:  32,
+	})
+
+	display.ClearDisplay()
+
+	// this interrupt pin is not being used
 	in := machine.D5
 	in.Configure(machine.PinConfig{Mode: machine.PinInput})
 	in.High()
@@ -82,11 +99,13 @@ func main() {
 	//adaptor.Configure()
 	adaptor.Configure2(false)   //true = reset active high
 	time.Sleep(5 * time.Second) // necessary
-	s, err := adaptor.GetFwVersion()
+	fw, err := adaptor.GetFwVersion()
 	if err != nil {
 		println("GetFwVersion Error:", err)
 	}
-	println("firmware:", s)
+	//println("firmware:", fw)
+	tinyfont.WriteLineRotated(&display, font, 1, 10, fmt.Sprintf("fmwr: %s", fw), white, tinyfont.NO_ROTATION)
+	display.Display()
 
 	for {
 		err := connectToAP()
@@ -98,7 +117,9 @@ func main() {
 	opts := mqtt.NewClientOptions()
 	clientID := "tinygo-client-" + randomString(5)
 	opts.AddBroker(server).SetClientID(clientID)
-	println(clientID)
+	//println(clientID)
+	tinyfont.WriteLineRotated(&display, font, 1, 30, fmt.Sprintf("id: %s", clientID), white, tinyfont.NO_ROTATION)
+	display.Display()
 	//opts.AddBroker(server).SetClientID("tinygo-client-2")
 
 	println("Connecting to MQTT broker at", server)
@@ -134,12 +155,12 @@ func main() {
 			for k = 0; k < 16; k++ {
 				if trellis.IsKeyPressed(k) {
 					//if trellis.JustPressed(k) {
+					sendMessage(k)
 					trellis.Clear()
 					trellis.SetLED(k)
 					time.Sleep(1 * time.Millisecond)
 					tr.WriteDisplay()
-					//fmt.Printf("%d was pressed\r\n", k)
-					sendMessage(k)
+					time.Sleep(1 * time.Second) // simple debouncing
 					break
 				}
 			}
@@ -197,8 +218,10 @@ func failMessage(action, msg string) {
 
 func sendMessage(key uint8) {
 	println("Publishing MQTT message...")
-	data := []byte(fmt.Sprintf(`{"key":%d}`, key))
-	token := cl.Publish(topic, 0, false, data)
+	msg := fmt.Sprintf(`{"key":%d}`, key)
+
+	//data := []byte(fmt.Sprintf(`{"key":%d}`, key))
+	token := cl.Publish(topic, 0, false, []byte(msg))
 	token.Wait()
 	if err := token.Error(); err != nil {
 		switch t := err.(type) {
@@ -210,5 +233,9 @@ func sendMessage(key uint8) {
 		default:
 			println(err.Error())
 		}
+	} else {
+		display.ClearDisplay()
+		tinyfont.WriteLineRotated(&display, font, 1, 10, msg, white, tinyfont.NO_ROTATION)
+		display.Display()
 	}
 }
